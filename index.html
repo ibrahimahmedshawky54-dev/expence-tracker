@@ -1,0 +1,251 @@
+<!DOCTYPE html><html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            transition: 0.3s;
+        }body.dark {
+        background: #1e1e1e;
+        color: #ffffff;
+    }
+
+    .container {
+        max-width: 450px;
+        margin: 40px auto;
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 20px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        transition: 0.3s;
+    }
+
+    body.dark .container {
+        background: #2b2b2b;
+        box-shadow: 0 5px 20px rgba(255,255,255,0.1);
+    }
+
+    h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 26px;
+    }
+
+    input, button {
+        width: 100%;
+        padding: 12px;
+        margin: 7px 0;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+        transition: 0.3s;
+    }
+
+    body.dark input {
+        background: #3b3b3b;
+        color: white;
+        border: 1px solid #555;
+    }
+
+    button {
+        background: #4a6cf7;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    button:hover {
+        background: #3452d1;
+    }
+
+    .deleteBtn {
+        background: #ff4b4b;
+        width: auto;
+        padding: 6px 12px;
+        margin-left: 10px;
+    }
+
+    .deleteBtn:hover {
+        background: #d93636;
+    }
+
+    ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 15px;
+    }
+
+    li {
+        background: #f7f7f7;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 16px;
+        transition: 0.3s;
+    }
+
+    body.dark li {
+        background: #3a3a3a;
+    }
+
+    .totalBox {
+        margin-top: 15px;
+        padding: 12px;
+        background: #e9f0ff;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+
+    body.dark .totalBox {
+        background: #3b3b70;
+    }
+
+    .toggleDark {
+        margin-top: 10px;
+        background: #222;
+    }
+
+    body.dark .toggleDark {
+        background: #ddd;
+        color: black;
+    }
+
+    canvas {
+        margin-top: 20px;
+        width: 100% !important;
+    }
+</style>
+
+</head>
+<body>
+    <div class="container">
+        <h2>Expense Tracker</h2><input type="text" id="title" placeholder="Expense Title" />
+    <input type="number" id="amount" placeholder="Amount" />
+    <button onclick="addExpense()">Add Expense</button>
+    <button onclick="sortExpenses()">Sort by Amount</button>
+    <button class="toggleDark" onclick="toggleDarkMode()">Dark Mode</button>
+
+    <div class="totalBox">Total: <span id="total">0</span> EGP</div>
+
+    <ul id="list"></ul>
+
+    <canvas id="chart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+
+    function saveData(){
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+    }
+
+    function addExpense() {
+        const title = document.getElementById('title').value;
+        const amount = Number(document.getElementById('amount').value);
+
+        if(title === '' || amount === ''){
+            alert("Please fill fields");
+            return;
+        }
+
+        expenses.push({ title, amount });
+        saveData();
+        renderList();
+        updateTotal();
+        updateChart();
+
+        document.getElementById('title').value = '';
+        document.getElementById('amount').value = '';
+    }
+
+    function deleteExpense(index){
+        expenses.splice(index, 1);
+        saveData();
+        renderList();
+        updateTotal();
+        updateChart();
+    }
+
+    function renderList() {
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        expenses.forEach((exp, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span>${exp.title} - ${exp.amount} EGP</span>
+                <button class='deleteBtn' onclick='deleteExpense(${index})'>X</button>`;
+            list.appendChild(li);
+        });
+    }
+
+    function updateTotal() {
+        const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+        document.getElementById('total').innerText = total;
+    }
+
+    function sortExpenses() {
+        expenses.sort((a, b) => a.amount - b.amount);
+        saveData();
+        renderList();
+        updateChart();
+    }
+
+    let chart;
+    function updateChart() {
+        const ctx = document.getElementById('chart');
+        const labels = expenses.map(e => e.title);
+        const data = expenses.map(e => e.amount);
+
+        if(chart){ chart.destroy(); }
+
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Expenses',
+                    data: data,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function toggleDarkMode(){
+        document.body.classList.toggle('dark');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+    }
+
+    if(localStorage.getItem('darkMode') === 'true'){
+        document.body.classList.add('dark');
+    }
+
+    renderList();
+    updateTotal();
+    updateChart();
+</script>
+
+</body>
+</html>
